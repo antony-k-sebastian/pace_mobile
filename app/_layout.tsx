@@ -1,7 +1,11 @@
+// app/_layout.tsx
 import { Stack } from "expo-router";
 
-// this is wheere we define the shared UI elements for the app
 export default function RootLayout() {
-  // stack repreesents the screen we are in
-  return <Stack />;
+  return (
+    <Stack initialRouteName="(auth)/authScreen">
+      <Stack.Screen name="(auth)/authScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)/index" options={{ headerShown: false }} />
+    </Stack>
+  );
 }
