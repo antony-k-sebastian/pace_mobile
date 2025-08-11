@@ -1,11 +1,11 @@
-// app/_layout.tsx
 import { Stack } from "expo-router";
+import {AuthProvider} from "../context/authContext";
 
 export default function RootLayout() {
   return (
-    <Stack initialRouteName="(auth)/authScreen">
-      <Stack.Screen name="(auth)/authScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)/index" options={{ headerShown: false }} />
+    <AuthProvider>
+    <Stack screenOptions={{ headerShown: false }}>
     </Stack>
+    </AuthProvider>
   );
 }

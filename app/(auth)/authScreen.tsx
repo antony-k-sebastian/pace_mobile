@@ -1,17 +1,25 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform, View, StyleSheet } from "react-native";
 import { Text, TextInput, Button, useTheme } from "react-native-paper";
+import { useAuth } from "@/context/authContext";
 
 export default function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState<boolean>(false);
   const [email, setEmail] = useState<string>("");
+  const [name, setName] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
 
+  const { login, register } = useAuth();
+
   const handleAuth = async () => {
-    if (!email || !password) {
-      setError("Email and password are required.");
+    if (isSignUp && (!email || !password || !name)) {
+      setError("All fields are required.");
+      return;
+    }
+    if (!isSignUp && (!email || !password)) {
+      setError("Email and password is required.");
       return;
     }
     if (password.length < 6) {
@@ -19,6 +27,21 @@ export default function AuthScreen() {
       return;
     }
     setError(null);
+    try {
+      if (isSignUp) {
+        const result = await register(email, password, name);
+        if (!result.success) {
+          setError(result.msg || "Registration failed.");
+        }
+      } else {
+        const result = await login(email, password);
+        if (!result.success) {
+          setError(result.msg || "Login failed.");
+        }
+      }
+    } catch (err) {
+      setError("An unexpected error occurred.");
+    }
   };
 
   return (
@@ -31,7 +54,16 @@ export default function AuthScreen() {
         <Text style={styles.title} variant="headlineMedium">
           {isSignUp ? "Create Account" : "Welcome Back"}
         </Text>
-
+        {isSignUp && (
+          <TextInput
+            label="Name"
+            keyboardType="default"
+            placeholder="Enter your name"
+            mode="outlined"
+            style={styles.input}
+            onChangeText={setName}
+          />
+        )}
         <TextInput
           label="Email"
           autoCapitalize="none"
@@ -41,7 +73,6 @@ export default function AuthScreen() {
           style={styles.input}
           onChangeText={setEmail}
         />
-
         <TextInput
           label="Password"
           autoCapitalize="none"
@@ -54,11 +85,7 @@ export default function AuthScreen() {
 
         {error && <Text style={{ color: theme.colors.error }}>{error}</Text>}
 
-        <Button
-          mode="contained"
-          onPress={handleAuth}
-          style={styles.button}
-        >
+        <Button mode="contained" onPress={handleAuth} style={styles.button}>
           {isSignUp ? "Sign Up" : "Sign In"}
         </Button>
 
