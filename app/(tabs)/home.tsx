@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
-  const name = "Antony"; 
+  const name = "Antony";
   const dailyPoints = 25;
   const weeklyProgress = 0.6;
   const nextMilestone = "Earn 100 points to unlock a reward";
@@ -83,44 +83,27 @@ export default function HomeScreen() {
         </View>
 
         {/* Dashboard: Action Completion Tracker */}
-        <Card
-          style={styles.card}
-          onPress={() => router.push("/(modals)/activityTracker")}
-        >
+        <Card style={styles.card}>
           <Card.Title
-            title="Action Tracker"
-            right={(props) => (
-              <MaterialCommunityIcons
-                {...props}
-                name="chevron-right"
-                size={28}
-              />
+            title="Track Contributions"
+            left={(props) => (
+              <MaterialCommunityIcons {...props} name="chart-line" size={28} />
             )}
           />
-          <Card.Content style={{ paddingTop: 0 }}>
-            {recentActions.length > 0 ? (
-              recentActions.slice(0, 2).map((action, idx) => (
-                <View key={idx} style={styles.recentActionRow}>
-                  <MaterialCommunityIcons
-                    name="check-circle-outline"
-                    size={20}
-                    color="#6200ee"
-                    style={{ marginRight: 8 }}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text variant="bodyMedium">{action.title}</Text>
-                    <Text variant="bodySmall" style={{ color: "#666" }}>
-                      {action.sdg} • {action.date}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <Text variant="bodySmall" style={{ color: "#999" }}>
-                No recent actions yet. Start your first one today!
-              </Text>
-            )}
+          <Card.Content>
+            <Text variant="bodyMedium">
+              View your impact and contributions towards the UN Sustainable
+              Development Goals.
+            </Text>
           </Card.Content>
+          <Card.Actions>
+            <Button
+              mode="contained"
+              onPress={() => router.push("/progress")} // or your progress screen
+            >
+              View Progress
+            </Button>
+          </Card.Actions>
         </Card>
 
         {/* Dashboard: Pop-Up Challenge */}
