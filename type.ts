@@ -19,3 +19,12 @@ export type AuthContextType = {
   ) => Promise<{ success: boolean; msg?: string }>;
   updateUserData: (userId: string) => Promise<void>;
 };
+
+export type ActionItem = {
+  id: string;
+  title: string;          
+  estimatedMins: number;   
+  points: number;
+  progress?: number;       
+  category: string;
+};
