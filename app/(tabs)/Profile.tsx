@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
   const router = useRouter();
-  
+
   const name = "Antony";
   const rank = "Intermediate";
   const totalPoints = 1240;
@@ -29,7 +29,7 @@ export default function ProfileScreen() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      router.replace("/(auth)/authScreen"); 
+      router.replace("/(auth)/authScreen");
     } catch (e) {
       console.warn("Logout error", e.message || e);
     }
@@ -37,9 +37,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView
-        style={styles.container}
-      >
+      <ScrollView style={styles.container}>
         {/* Profile info */}
         <Card style={styles.card}>
           <Card.Content style={styles.row}>
@@ -93,18 +91,22 @@ export default function ProfileScreen() {
             </Text>
           </Card.Content>
           <Card.Actions>
-            <Button mode="outlined" onPress={() => router.push("/privacy")}>
+            <Button
+              mode="outlined"
+              labelStyle={{ color: "#000000" }}
+              onPress={() => router.push("/privacy")}
+            >
               Privacy Settings
             </Button>
           </Card.Actions>
         </Card>
 
         {/* Logout */}
-        <Button
-          mode="contained"
-          onPress={handleLogout}
-          style={{ marginTop: 8 }}
-        >
+        <Button 
+        mode="outlined" 
+        labelStyle={{ color: "#000000" }}
+        onPress={handleLogout} style={{ marginTop: 8 }}>
+          
           Log out
         </Button>
       </ScrollView>
@@ -114,7 +116,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#f5f5f5" },
-  card: { marginBottom: 16, borderRadius: 12 },
+  card: { marginBottom: 16, borderRadius: 12, backgroundColor: "#ffffff" },
   row: { flexDirection: "row", alignItems: "center" },
   muted: { color: "#666" },
 });
