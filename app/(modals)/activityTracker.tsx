@@ -40,8 +40,7 @@ export default function SDGTrackerScreen() {
         </Text>
       }
       renderItem={({ item }) => {
-        // TODO: replace with real progress from backend
-        const progress = 0; // e.g., progressBySdg[item.id] ?? 0
+        const progress = 0; 
         return (
           <Card
             style={styles.card}

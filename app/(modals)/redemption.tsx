@@ -1,4 +1,3 @@
-// app/redemptions.tsx
 import React, { useEffect, useState } from "react";
 import { View, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { Card, List, Divider, Text, Chip, Snackbar, Appbar } from "react-native-paper";
