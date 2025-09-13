@@ -47,7 +47,7 @@ export default function HomeScreen() {
       >
         {/* Personalized Greeting */}
         <Text variant="titleLarge" style={{ marginBottom: 4, color: "#000000" }}>
-          Welcome back, {name} !
+          Welcome back, {name}!
         </Text>
         <Text variant="bodyMedium" style={{ marginBottom: 16, color: "#666666" }}>
           Keep up the great work towards your goals.
@@ -73,9 +73,8 @@ export default function HomeScreen() {
 
         {/* CTA: Start New Action */}
         <Button
-          mode="outlined"
+          mode="contained"
           style={{ marginVertical: 8,  }}
-          labelStyle={{ color: "#000000" }}
           onPress={() => console.log("Navigate to Actions")}
         >
           Start New Action

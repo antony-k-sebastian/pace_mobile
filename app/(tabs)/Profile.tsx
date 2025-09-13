@@ -103,10 +103,9 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <Button 
-        mode="outlined" 
-        labelStyle={{ color: "#000000" }}
+        mode="contained" 
+        //labelStyle={{ color: "#000000" }}
         onPress={handleLogout} style={{ marginTop: 8 }}>
-          
           Log out
         </Button>
       </ScrollView>

@@ -1,22 +1,61 @@
-import React, { useMemo, useRef, useState } from "react";
-import { View, StyleSheet, Animated, Easing, Platform } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, StyleSheet, Platform } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Button, Text, Card, Divider, Snackbar, Chip, List, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import ACTIONS from "@/data/actions";
+import ACTIONS from "@/data/actions";               // only used as a visual fallback while loading
 import FALLBACKS from "@/data/fallbacks";
 import type { ActionItem } from "@/components/ActionCard";
+import { fetchActionByCode, validateScanAndComplete } from "@/services/activityService";
 
 export default function ActionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const theme = useTheme();
 
-  const item: ActionItem | undefined = ACTIONS.find((a) => a.id === id);
-  const meta = useMemo(() => FALLBACKS[id!] ?? { description: "Details coming soon.", steps: [], kpi: "" }, [id]);
+  // DB detail
+  const [detail, setDetail] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Static fallback (only for initial paint)
+  const staticItem: ActionItem | undefined = ACTIONS.find((a) => a.id === id);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!id) return;
+    setLoading(true);
+    fetchActionByCode(id)
+      .then((d) => {
+        if (isMounted) setDetail(d ?? null);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  // Prefer DB description/steps; fall back to our local FALLBACKS blob
+  const meta = useMemo(() => {
+    const fb = FALLBACKS[id!] ?? { description: "Details coming soon.", steps: [], kpi: "" };
+    return {
+      description: (detail?.description && String(detail.description).trim()) || fb.description,
+      steps: (detail?.steps?.length ? detail.steps : fb.steps) as string[],
+    };
+  }, [id, detail]);
+
+  const points = detail?.points ?? detail?.reward_points ?? staticItem?.points ?? 0;
+  const mins = detail?.estimatedMins ?? detail?.estimated_mins ?? staticItem?.estimatedMins ?? 0;
+  const sdgs = (detail?.sdgs ?? staticItem?.sdgs) || [];
+
+  // Simple completion UX
   const [done, setDone] = useState(false);
+  const alreadyCompleted = detail?.status === "completed";
+  const buttonDisabled = alreadyCompleted && !done;
+
+  // Toast
   const [snack, setSnack] = useState<{ visible: boolean; text: string }>({ visible: false, text: "" });
 
   // QR state (expo-camera)
@@ -24,13 +63,6 @@ export default function ActionDetail() {
   const [permissions, requestPermission] = useCameraPermissions();
   const [qrValue, setQrValue] = useState<string | null>(null);
   const [hasScanned, setHasScanned] = useState(false); // throttle multiple fires
-
-  // celebration
-  const burst = useRef(new Animated.Value(0)).current;
-  const runBurst = () => {
-    burst.setValue(0);
-    Animated.timing(burst, { toValue: 1, duration: 800, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-  };
 
   const handleScanPress = async () => {
     if (!permissions?.granted) {
@@ -44,38 +76,58 @@ export default function ActionDetail() {
     setScannerOpen(true);
   };
 
-  const onBarcodeScanned = ({ data }: { data: string }) => {
-    if (hasScanned) return; // prevent double trigger
+  const onBarcodeScanned = async ({ data }: { data: string }) => {
+    if (hasScanned) return;
     setHasScanned(true);
-    setQrValue(data);          // <— scanned string stored here
     setScannerOpen(false);
-    setDone(true);
-    runBurst();
-    setSnack({ visible: true, text: `🎉 Logged via QR! +${item?.points ?? 10} points` });
+    setQrValue(data);
+
+    try {
+      const res = await validateScanAndComplete(id!, data);
+      if (res.ok) {
+        setDone(true);
+        setSnack({ visible: true, text: `🎉 Logged via QR! +${res.points} points` });
+        // reflect completed locally so the button disables if user stays here
+        setDetail((prev: any) => (prev ? { ...prev, status: "completed" } : prev));
+      } else {
+        const msg =
+          res.reason === "mismatch"
+            ? "QR does not match this activity."
+            : res.reason === "already_completed"
+            ? "This activity is already completed."
+            : res.reason === "not_found"
+            ? "Activity not found."
+            : "Could not update activity. Please try again.";
+        setSnack({ visible: true, text: msg });
+        setHasScanned(false); // allow retry
+      }
+    } catch {
+      setSnack({ visible: true, text: "Something went wrong. Please try again." });
+      setHasScanned(false);
+    }
   };
 
-  const scale = burst.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
-  const opacity = burst.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const title = detail?.title ?? staticItem?.title ?? "Activity";
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <View style={styles.container}>
-        <Stack.Screen options={{ title: item ? item.title : "Activity" }} />
+        <Stack.Screen options={{ title }} />
 
-        {/* Title card (now white with black text) */}
+        {/* Title card */}
         <View style={styles.hero}>
           <Text variant="headlineSmall" style={styles.heroTitle}>
-            {item ? item.title : "Activity"}
+            {title}
           </Text>
           <View style={styles.chipsRow}>
             <Chip mode="outlined" compact icon="target" textStyle={{ color: "#000" }}>
-              {item?.points ?? 10} pts
+              {points} pts
             </Chip>
             <Chip mode="outlined" compact icon="clock-outline" textStyle={{ color: "#000" }}>
-              {item?.estimatedMins ?? 5} mins
+              {mins} mins
             </Chip>
             <Chip mode="outlined" compact icon="earth" textStyle={{ color: "#000" }}>
-              SDG {item?.sdgs?.join(", ") || "—"}
+              SDG {sdgs.length ? sdgs.join(", ") : "—"}
             </Chip>
           </View>
         </View>
@@ -98,7 +150,9 @@ export default function ActionDetail() {
                   style={{ paddingVertical: 2 }}
                 />
               ))}
-              {meta.steps.length === 0 && <Text style={{ color: "#000", opacity: 0.6 }}>No steps listed for this activity (yet).</Text>}
+              {meta.steps.length === 0 && (
+                <Text style={{ color: "#000", opacity: 0.6 }}>No steps listed for this activity (yet).</Text>
+              )}
             </View>
 
             {qrValue && (
@@ -113,25 +167,17 @@ export default function ActionDetail() {
 
         <View style={{ height: 12 }} />
 
-        {/* Primary CTA */}
+        {/* Primary CTA (no celebration; just toast + button state) */}
         <Button
           mode="contained"
-          onPress={done ? () => router.back() : handleScanPress}
+          disabled={buttonDisabled || loading}
+          onPress={done ? () => router.replace(`/actions?completed=${id}`) : handleScanPress}
           icon={done ? "check" : "qrcode-scan"}
           style={styles.cta}
           contentStyle={{ paddingVertical: 6 }}
         >
-          {done ? "Done" : "Click to Scan QR"}
+          {done ? "Done" : alreadyCompleted ? "Already Completed" : "Click to Scan QR"}
         </Button>
-
-        {/* Celebration */}
-        {done && (
-          <Animated.View style={[styles.burst, { transform: [{ scale }], opacity }]}>
-            <Text style={{ fontSize: 42 }}>🎊</Text>
-            <Text style={{ fontSize: 42, marginLeft: 8 }}>🎉</Text>
-            <Text style={{ fontSize: 42, marginLeft: 8 }}>✨</Text>
-          </Animated.View>
-        )}
 
         {/* Snackbar */}
         <Snackbar visible={snack.visible} onDismiss={() => setSnack({ visible: false, text: "" })} duration={2200}>
@@ -175,7 +221,6 @@ const RADIUS = 18;
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 12 },
 
-  // Title card now white
   hero: {
     backgroundColor: "#fff",
     borderRadius: RADIUS,
@@ -192,18 +237,26 @@ const styles = StyleSheet.create({
 
   card: { borderRadius: RADIUS, backgroundColor: "#fff" },
 
-  // All main text is black now
   description: { marginBottom: 8, lineHeight: 20, color: "#000" },
   divider: { marginVertical: 10, opacity: 0.12 },
   sectionTitle: { marginTop: 4, marginBottom: 4, color: "#000" },
-  qrValue: { marginTop: 4, color: "#000", fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }) },
+  qrValue: {
+    marginTop: 4,
+    color: "#000",
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+  },
 
   cta: { borderRadius: 12 },
 
-  burst: { position: "absolute", top: 140, alignSelf: "center", flexDirection: "row" },
-
-  // Scanner overlay (unchanged)
-  scannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "flex-start", paddingTop: 16, paddingHorizontal: 12, paddingBottom: 24 },
+  // Scanner overlay
+  scannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    justifyContent: "flex-start",
+    paddingTop: 16,
+    paddingHorizontal: 12,
+    paddingBottom: 24,
+  },
   scannerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   scannerFrame: { alignSelf: "center", width: "88%", aspectRatio: 1, borderRadius: 16, overflow: "hidden", backgroundColor: "black" },
   scannerHint: { textAlign: "center", color: "white", marginTop: 12, opacity: 0.8 },

@@ -28,7 +28,7 @@ export async function fetchActivities(limit = 25, offset = 0) {
   if (error) throw error;
   return (data ?? []) as ActivityLog[];
 }
-
+console.log("fetchActivities called");zzzzz
 // realtime: call unsubscribe() when unmounting
 export async function subscribeToNewActivities(onInsert: (row: ActivityLog) => void) {
   const uid = await getCurrentUserId();
